@@ -128,14 +128,26 @@ export class Trader extends EventEmitter {
     }
   }
 
-  async sell(position: any) {
-    // TODO: Build and submit sell transaction (Jupiter or fallback)
+  async sell(position: any, priorityFee: number = 0.00009) {
+    const mint = position.pool.mint;
+    const amount = position.amount;
     if (this.settings.Settings.SimulatedTransaction) {
       this.emit('trade', { type: 'sell', position });
       return;
     }
-    // Real trade: build, sign, and send transaction
-    // ...
-    this.emit('trade', { type: 'sell', position });
+    try {
+      // Swap from token back to SOL
+      const sig = await this.performPhantomSwap(
+        mint, // from token
+        'So11111111111111111111111111111111111111112', // to SOL
+        amount,
+        this.settings.Settings.Slippage,
+        priorityFee
+      );
+      this.emit('trade', { type: 'sell', position: { ...position, txSig: sig } });
+    } catch (e) {
+      // Fallback logic stub: try another DEX or route here in the future
+      this.emit('trade', { type: 'sell-failed', reason: (e as Error).message, position });
+    }
   }
 } 
