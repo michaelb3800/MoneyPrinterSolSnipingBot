@@ -23,7 +23,7 @@ const watcher = new Watcher(settings);
 const classifier = new Classifier(settings);
 const trader = new Trader(settings);
 const risk = new RiskManager(settings);
-const session = new SessionManager(settings);
+const session = new SessionManager(settings, trader);
 
 let botActive = false;
 

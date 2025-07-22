@@ -33,7 +33,7 @@ export class MoneyPrinterBot extends EventEmitter {
     this.classifier = new Classifier(this.settings);
     this.trader = new Trader(this.settings);
     this.risk = new RiskManager(this.settings);
-    this.session = new SessionManager(this.settings);
+    this.session = new SessionManager(this.settings, this.trader);
     if (onTrade) this.trader.on('trade', onTrade);
     if (onError) this.on('error', onError);
     // Wire up event flow
