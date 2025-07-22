@@ -8,6 +8,7 @@ MoneyPrinterBot is designed for seamless integration into any Node.js/TypeScript
 
 ```
 npm install @solana/web3.js bs58 axios node-fetch zod
+npm install --save-dev typescript @types/node
 ```
 
 ### 2. Project Structure
