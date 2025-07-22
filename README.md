@@ -10,6 +10,7 @@ MoneyPrinterBot is designed for seamless integration into any Node.js/TypeScript
 npm install @solana/web3.js bs58 axios node-fetch zod
 npm install --save-dev typescript @types/node
 ```
+TypeScript users must also install `@types/node`.
 
 ### 2. Project Structure
 - Place all core files (`Trader`, `Watcher`, `Classifier`, `Risk`, `Session`, `Settings`, `moneyPrinterBot.ts`) in your backend project directory.
@@ -309,6 +310,7 @@ All settings are in `settings.json` (see `settings.example.json`):
    ```bash
    npm install
    ```
+   *Note: `@types/node` must also be installed for TypeScript builds.*
 2. **Configure settings:**
    - Copy `settings.example.json` to `settings.json` and fill in your values.
 3. **(Optional) Set up Supabase:**
@@ -316,7 +318,7 @@ All settings are in `settings.json` (see `settings.example.json`):
    - Add your Supabase URL and Key to `settings.json`
 4. **Run the server:**
    ```bash
-   npx ts-node api/server.ts
+   npx ts-node server.ts
    ```
    The server will start on port 3000 by default.
 
