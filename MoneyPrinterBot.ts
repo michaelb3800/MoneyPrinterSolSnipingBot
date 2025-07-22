@@ -5,6 +5,7 @@ import { RiskManager } from './Risk';
 import { SessionManager } from './Session';
 import { Settings, SettingsSchema } from './Settings';
 import EventEmitter from 'events';
+import baseSettings from './settings.json';
 
 export interface MoneyPrinterBotOptions {
   privateKey: string;
@@ -25,10 +26,10 @@ export class MoneyPrinterBot extends EventEmitter {
   constructor({ privateKey, params = {}, onTrade, onError }: MoneyPrinterBotOptions) {
     super();
     // Load default settings and override with params
-    const baseSettings = require('./settings.json');
-    baseSettings.Settings.PrivateKey = privateKey;
-    Object.assign(baseSettings.Settings, params);
-    this.settings = SettingsSchema.parse(baseSettings);
+    const settings = JSON.parse(JSON.stringify(baseSettings));
+    settings.Settings.PrivateKey = privateKey;
+    Object.assign(settings.Settings, params);
+    this.settings = SettingsSchema.parse(settings);
     this.watcher = new Watcher(this.settings);
     this.classifier = new Classifier(this.settings);
     this.trader = new Trader(this.settings);
