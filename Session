@@ -1,0 +1,51 @@
+import { Settings } from '../config/settingsSchema';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
+
+export class SessionManager {
+  private openPositions: any[] = [];
+  private settings: Settings;
+  private supabase: SupabaseClient | null = null;
+
+  constructor(settings: Settings) {
+    this.settings = settings;
+    if (settings.Settings.SupabaseUrl && settings.Settings.SupabaseKey) {
+      this.supabase = createClient(settings.Settings.SupabaseUrl, settings.Settings.SupabaseKey);
+    }
+  }
+
+  isWithinSchedule(): boolean {
+    const now = new Date();
+    const [startH, startM] = this.settings.Settings.ScheduleTimeStart.split(':').map(Number);
+    const [endH, endM] = this.settings.Settings.ScheduleTimeEnd.split(':').map(Number);
+    const start = new Date(now);
+    start.setHours(startH, startM, 0, 0);
+    const end = new Date(now);
+    end.setHours(endH, endM, 59, 999);
+    return now >= start && now <= end;
+  }
+
+  async trackPosition(position: any) {
+    this.openPositions.push(position);
+    if (this.supabase) {
+      await this.supabase.from('positions').insert([position]);
+    }
+  }
+
+  async closePosition(position: any) {
+    this.openPositions = this.openPositions.filter((p) => p !== position);
+    if (this.supabase && position.id) {
+      await this.supabase.from('positions').delete().eq('id', position.id);
+    }
+  }
+
+  getOpenPositions() {
+    return this.openPositions;
+  }
+
+  async loadPositionsFromSupabase() {
+    if (this.supabase) {
+      const { data } = await this.supabase.from('positions').select('*');
+      this.openPositions = data || [];
+    }
+  }
+} 
