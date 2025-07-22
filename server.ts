@@ -15,7 +15,10 @@ const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
 
 // Load and validate settings
-const settingsPath = path.resolve(process.cwd(), 'settings.example.json'); // Change to actual settings.json in prod
+// Allow overriding the settings file via the SETTINGS_PATH env var
+const settingsPath = process.env.SETTINGS_PATH
+  ? path.resolve(process.cwd(), process.env.SETTINGS_PATH)
+  : path.resolve(process.cwd(), 'settings.json');
 const settings = loadSettings(settingsPath);
 
 // Instantiate core modules
