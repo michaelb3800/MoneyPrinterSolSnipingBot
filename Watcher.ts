@@ -1,6 +1,6 @@
 import { EventEmitter } from 'events';
 import WebSocket from 'ws';
-import { Settings } from '../config/settingsSchema';
+import { Settings } from './Settings';
 
 export class Watcher extends EventEmitter {
   private ws: WebSocket | null = null;

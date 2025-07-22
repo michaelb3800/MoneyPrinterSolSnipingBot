@@ -1,6 +1,6 @@
 import { EventEmitter } from 'events';
 import fetch from 'node-fetch';
-import { Settings } from '../config/settingsSchema';
+import { Settings } from './Settings';
 
 export class Classifier extends EventEmitter {
   private settings: Settings;

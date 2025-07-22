@@ -1,0 +1,28 @@
+{
+  "Settings": {
+    "APIKey": "your_helius_api_key",
+    "APISecret": "your_helius_api_secret",
+    "RPC-Mainnet": "https://api.mainnet-beta.solana.com",
+    "RPC-Devnet": "https://api.devnet.solana.com",
+    "TestNet": false,
+    "SimulatedTransaction": true,
+    "PrivateKey": "",
+    "BaseCurrency": "SOL",
+    "AmountToSpendSOL": 1.0,
+    "AmountToSpendUSD": 10.0,
+    "AmountTokensToTrade": 3,
+    "TakeProfitPercentage": 25.0,
+    "StopLossPercentage": 15.0,
+    "EntryLiquidity": 10000.0,
+    "ExitLiquidity": 6000.0,
+    "TokenAgeMaxHr": 0.33,
+    "Slippage": 7,
+    "ScheduleTimeStart": "12:03",
+    "ScheduleTimeEnd": "12:04",
+    "Notifications": false,
+    "BotToken": "your_telegram_bot_token",
+    "ChatID": "your_telegram_chat_id",
+    "SupabaseUrl": "https://your-project.supabase.co",
+    "SupabaseKey": "your_supabase_service_role_key"
+  }
+}
