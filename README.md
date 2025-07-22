@@ -1,5 +1,121 @@
 # MoneyPrinter's One‑Tap Solana Sniping Bot
 
+## Integrating MoneyPrinterBot into Your Backend
+
+MoneyPrinterBot is designed for seamless integration into any Node.js/TypeScript backend. You can start, stop, and monitor a trading bot for any user with just a few lines of code. Each bot instance trades using the user's Phantom wallet (private key) and your chosen parameters.
+
+### 1. Install Dependencies
+
+```
+npm install @solana/web3.js bs58 axios node-fetch zod
+```
+
+### 2. Project Structure
+- Place all core files (`Trader`, `Watcher`, `Classifier`, `Risk`, `Session`, `Settings`, `moneyPrinterBot.ts`) in your backend project directory.
+- Ensure you have a `settings.json` file with your default config (see below).
+
+### 3. Usage Example: Single User
+
+```js
+import { MoneyPrinterBot } from './moneyPrinterBot';
+
+const bot = new MoneyPrinterBot({
+  privateKey: 'USER_PHANTOM_PRIVATE_KEY', // base58 string
+  params: {
+    AmountToSpendSOL: 1,
+    Slippage: 5,
+    // ...any other overrides
+  },
+  onTrade: (tradeEvent) => {
+    console.log('Trade event:', tradeEvent);
+  },
+  onError: (err) => {
+    console.error('Bot error:', err);
+  }
+});
+
+bot.start();
+// ...
+bot.stop();
+```
+
+### 4. Usage Example: Multi-User (Recommended for SaaS)
+
+```js
+import { MoneyPrinterBotManager } from './moneyPrinterBot';
+
+const manager = new MoneyPrinterBotManager();
+
+// Start a bot for a user
+manager.startBot('user123', {
+  privateKey: 'USER1_PRIVATE_KEY',
+  params: { AmountToSpendSOL: 2 }
+});
+
+// Start another bot for a different user
+manager.startBot('user456', {
+  privateKey: 'USER2_PRIVATE_KEY',
+  params: { AmountToSpendSOL: 0.5 }
+});
+
+// Stop a user's bot
+manager.stopBot('user123');
+
+// Get status
+console.log(manager.status('user456'));
+```
+
+### 5. settings.json Example
+
+```json
+{
+  "Settings": {
+    "APIKey": "your_helius_api_key",
+    "APISecret": "your_helius_api_secret",
+    "RPC-Mainnet": "https://api.mainnet-beta.solana.com",
+    "RPC-Devnet": "https://api.devnet.solana.com",
+    "TestNet": false,
+    "SimulatedTransaction": true,
+    "PrivateKey": "", // Will be set per user
+    "BaseCurrency": "SOL",
+    "AmountToSpendSOL": 1.0,
+    "AmountToSpendUSD": 10.0,
+    "AmountTokensToTrade": 3,
+    "TakeProfitPercentage": 25.0,
+    "StopLossPercentage": 15.0,
+    "EntryLiquidity": 10000.0,
+    "ExitLiquidity": 6000.0,
+    "TokenAgeMaxHr": 0.33,
+    "Slippage": 7,
+    "ScheduleTimeStart": "12:03",
+    "ScheduleTimeEnd": "12:04",
+    "Notifications": false,
+    "BotToken": "your_telegram_bot_token",
+    "ChatID": "your_telegram_chat_id",
+    "SupabaseUrl": "https://your-project.supabase.co",
+    "SupabaseKey": "your_supabase_service_role_key"
+  }
+}
+```
+
+### 6. Security Best Practices
+- **Never log or persist user private keys.**
+- **Encrypt keys in transit and at rest.**
+- **Run each bot instance in a sandboxed process or container if possible.**
+- **Validate all user input and config.**
+
+### 7. Advanced: Event Handling & Customization
+- Subscribe to the `trade` event for real-time trade updates.
+- Use the `setConfig()` method to update parameters on the fly.
+- Use the `status()` method to get current bot state and open positions.
+
+### 8. Troubleshooting
+- Ensure all dependencies are installed.
+- Check your `settings.json` for required fields.
+- Make sure your backend has network access to Solana RPC and swap APIs.
+
+---
+
 > **Developer Note:**
 > See the section [Integrating the Bot with Your App UI](#integrating-the-bot-with-your-app-ui) for step-by-step instructions and code examples on how to connect your frontend or backend to this bot for one-tap sniping.
 
@@ -266,6 +382,11 @@ All settings are in `settings.json` (see `settings.example.json`):
 - Integrate with your app backend via REST, WebSocket, or Supabase
 
 ---
+
+## Support
+For questions or help, open an issue or contact the project maintainer.
+# MoneyPrinterSolSnipingBot
+MoneyPrinterSolSnipingBot
 
 ## Support
 For questions or help, open an issue or contact the project maintainer.
