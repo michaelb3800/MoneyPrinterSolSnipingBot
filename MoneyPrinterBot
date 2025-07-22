@@ -1,9 +1,9 @@
-import { Trader } from './Trader';
-import { Watcher } from './Watcher';
-import { Classifier } from './Classifier';
-import { RiskManager } from './Risk';
-import { SessionManager } from './Session';
-import { Settings, SettingsSchema } from './Settings';
+import { Trader } from './Trader.ts';
+import { Watcher } from './Watcher.ts';
+import { Classifier } from './Classifier.ts';
+import { RiskManager } from './Risk.ts';
+import { SessionManager } from './Session.ts';
+import { Settings, SettingsSchema } from './Settings.ts';
 import EventEmitter from 'events';
 
 export interface MoneyPrinterBotOptions {
