@@ -1,4 +1,4 @@
-import { Settings } from '../config/settingsSchema';
+import { Settings } from './Settings';
 import Redis from 'ioredis';
 import fetch from 'node-fetch';
 

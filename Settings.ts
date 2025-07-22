@@ -37,3 +37,4 @@ export function loadSettings(path: string): Settings {
   const raw = fs.readFileSync(path, 'utf-8');
   const json = JSON.parse(raw);
   return SettingsSchema.parse(json);
+}

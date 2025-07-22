@@ -1,13 +1,13 @@
 import express from 'express';
 import http from 'http';
 import { WebSocketServer } from 'ws';
-import { loadSettings } from '../config/settingsSchema';
+import { loadSettings } from './Settings';
 import path from 'path';
-import { Watcher } from '../watcher';
-import { Classifier } from '../classifier';
-import { Trader } from '../trader';
-import { RiskManager } from '../risk';
-import { SessionManager } from '../session';
+import { Watcher } from './Watcher';
+import { Classifier } from './Classifier';
+import { Trader } from './Trader';
+import { RiskManager } from './Risk';
+import { SessionManager } from './Session';
 import cors from 'cors';
 
 const app = express();
