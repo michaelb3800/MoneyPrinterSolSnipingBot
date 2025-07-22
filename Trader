@@ -1,111 +1,153 @@
-import { Settings } from './Settings';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { EventEmitter } from 'events';
+import fetch from 'node-fetch';
+import { Settings } from '../config/settingsSchema';
+import { Keypair, Connection, Transaction, sendAndConfirmTransaction, PublicKey, VersionedTransaction } from '@solana/web3.js';
+import bs58 from 'bs58';
+import axios from 'axios';
 
-export class SessionManager {
-  private openPositions: any[] = [];
+export class Trader extends EventEmitter {
   private settings: Settings;
-  private supabase: SupabaseClient | null = null;
-  private priceWatchers: Map<string, NodeJS.Timeout> = new Map();
-  private trader: any; // Will be set in constructor
 
-  constructor(settings: Settings, trader?: any) {
+  constructor(settings: Settings) {
+    super();
     this.settings = settings;
-    if (settings.Settings.SupabaseUrl && settings.Settings.SupabaseKey) {
-      this.supabase = createClient(settings.Settings.SupabaseUrl, settings.Settings.SupabaseKey);
-    }
-    if (trader) this.trader = trader;
   }
 
-  isWithinSchedule(): boolean {
-    const now = new Date();
-    const [startH, startM] = this.settings.Settings.ScheduleTimeStart.split(':').map(Number);
-    const [endH, endM] = this.settings.Settings.ScheduleTimeEnd.split(':').map(Number);
-    const start = new Date(now);
-    start.setHours(startH, startM, 0, 0);
-    const end = new Date(now);
-    end.setHours(endH, endM, 59, 999);
-    return now >= start && now <= end;
-  }
-
-  async trackPosition(position: any) {
-    this.openPositions.push(position);
-    if (this.supabase) {
-      await this.supabase.from('positions').insert([position]);
-    }
-    // Start price watcher for this position
-    if (this.trader) this.startPriceWatcher(position);
-  }
-
-  async closePosition(position: any) {
-    this.openPositions = this.openPositions.filter((p) => p !== position);
-    if (this.supabase && position.id) {
-      await this.supabase.from('positions').delete().eq('id', position.id);
-    }
-    // Stop price watcher
-    if (position && position.timestamp) {
-      const key = position.timestamp.toString();
-      if (this.priceWatchers.has(key)) {
-        clearInterval(this.priceWatchers.get(key));
-        this.priceWatchers.delete(key);
-      }
+  async getSOLPriceUSD(): Promise<number> {
+    try {
+      const res = await fetch('https://public-api.birdeye.so/public/price?address=So11111111111111111111111111111111111111112');
+      const data: any = await res.json();
+      return data.data?.value || 0;
+    } catch {
+      return 0;
     }
   }
 
-  getOpenPositions() {
-    return this.openPositions;
-  }
-
-  async loadPositionsFromSupabase() {
-    if (this.supabase) {
-      const { data } = await this.supabase.from('positions').select('*');
-      this.openPositions = data || [];
+  async buildJupiterSwap(mint: string, amount: number) {
+    // Jupiter API: https://quote-api.jup.ag/v6/quote
+    try {
+      const res = await fetch(`https://quote-api.jup.ag/v6/quote?inputMint=So11111111111111111111111111111111111111112&outputMint=${mint}&amount=${amount * 1e9}&slippageBps=${this.settings.Settings.Slippage * 100}`);
+      const data: any = await res.json();
+      return data;
+    } catch {
+      return null;
     }
   }
 
-  // --- New: Price watcher and auto-sell logic ---
-  startPriceWatcher(position: any) {
-    const key = position.timestamp.toString();
-    let highestPrice = position.entryPrice;
-    let trailingStop = highestPrice; // Initialize as number
-    const poll = async () => {
-      // Fetch current price for the token
-      const mint = position.pool.mint;
-      let price = 0;
+  async signAndSendJitoBundle(tx: Transaction, connection: Connection, priorityFee: number): Promise<string> {
+    // TODO: Replace with real Jito bundle submission
+    // For now, just send the transaction normally
+    const secretKey = bs58.decode(this.settings.Settings.PrivateKey);
+    const keypair = Keypair.fromSecretKey(secretKey);
+    tx.feePayer = keypair.publicKey;
+    tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+    await tx.sign(keypair);
+    // Simulate Jito bundle submission with retries
+    for (let i = 0; i < 3; i++) {
       try {
-        const res = await fetch(`https://public-api.birdeye.so/public/price?address=${mint}`);
-        const data = await res.json();
-        price = data.data?.value || 0;
-      } catch {}
-      // Take-Profit
-      if (
-        this.settings.Settings.TakeProfitPercentage &&
-        price >= position.entryPrice * (1 + this.settings.Settings.TakeProfitPercentage / 100)
-      ) {
-        this.trader.sell(position);
-        this.closePosition(position);
-        return;
+        const sig = await sendAndConfirmTransaction(connection, tx, [keypair], { commitment: 'confirmed' });
+        return sig;
+      } catch (e) {
+        // Increase priority fee and retry
+        // (In real Jito, set priority fee in bundle)
       }
-      // Stop-Loss
-      if (
-        this.settings.Settings.StopLossPercentage &&
-        price <= position.entryPrice * (1 - this.settings.Settings.StopLossPercentage / 100)
-      ) {
-        this.trader.sell(position);
-        this.closePosition(position);
-        return;
+    }
+    throw new Error('Jito bundle submission failed');
+  }
+
+  async performPhantomSwap(fromMint: string, toMint: string, amount: number, slippage: number, priorityFee: number) {
+    const connection = new Connection(this.settings.Settings['RPC-Mainnet']);
+    const secretKey = bs58.decode(this.settings.Settings.PrivateKey);
+    const keypair = Keypair.fromSecretKey(secretKey);
+    const params = new URLSearchParams({
+      from: fromMint,
+      to: toMint,
+      amount: amount.toString(), // amount in base units (SOL = 1, not lamports)
+      slip: slippage.toString(),
+      payer: keypair.publicKey.toBase58(),
+      fee: priorityFee.toString(),
+      txType: 'v0',
+    });
+    try {
+      const response = await axios.get(`https://swap.solxtence.com/swap?${params}`);
+      const { serializedTx, txType } = response.data.transaction;
+      const { blockhash } = await connection.getLatestBlockhash();
+      let transaction;
+      if (txType === 'v0') {
+        transaction = VersionedTransaction.deserialize(Buffer.from(serializedTx, 'base64'));
+        transaction.message.recentBlockhash = blockhash;
+        transaction.sign([keypair]);
+      } else {
+        transaction = Transaction.from(Buffer.from(serializedTx, 'base64'));
+        transaction.recentBlockhash = blockhash;
+        transaction.sign(keypair);
       }
-      // Trailing Stop-Loss
-      if (this.settings.Settings.TrailingStopPercentage) {
-        if (price > highestPrice) highestPrice = price;
-        trailingStop = highestPrice * (1 - this.settings.Settings.TrailingStopPercentage / 100);
-        if (price < trailingStop) {
-          this.trader.sell(position);
-          this.closePosition(position);
-          return;
-        }
-      }
-    };
-    const interval = setInterval(poll, 5000); // Poll every 5 seconds
-    this.priceWatchers.set(key, interval);
+      const signature = await sendAndConfirmTransaction(connection, transaction);
+      return signature;
+    } catch (error) {
+      throw new Error('Phantom swap failed: ' + (error?.message || error));
+    }
+  }
+
+  async buy(pool: any, amount: number) {
+    const solPrice = await this.getSOLPriceUSD();
+    const mint = pool.mint;
+    if (this.settings.Settings.SimulatedTransaction) {
+      // Simulate trade
+      const position = {
+        pool,
+        amount,
+        entryPrice: solPrice,
+        timestamp: Date.now(),
+        route: 'phantom',
+        simulated: true,
+      };
+      this.emit('trade', { type: 'buy', position });
+      return;
+    }
+    // Real trade: perform swap using Phantom wallet
+    try {
+      const sig = await this.performPhantomSwap(
+        'So11111111111111111111111111111111111111112', // SOL
+        mint,
+        amount,
+        this.settings.Settings.Slippage,
+        0.00009 // default priority fee, can be made configurable
+      );
+      const position = {
+        pool,
+        amount,
+        entryPrice: solPrice,
+        timestamp: Date.now(),
+        route: 'phantom',
+        txSig: sig,
+      };
+      this.emit('trade', { type: 'buy', position });
+    } catch (e) {
+      this.emit('trade', { type: 'buy-failed', reason: (e as Error).message, pool });
+    }
+  }
+
+  async sell(position: any, priorityFee: number = 0.00009) {
+    const mint = position.pool.mint;
+    const amount = position.amount;
+    if (this.settings.Settings.SimulatedTransaction) {
+      this.emit('trade', { type: 'sell', position });
+      return;
+    }
+    try {
+      // Swap from token back to SOL
+      const sig = await this.performPhantomSwap(
+        mint, // from token
+        'So11111111111111111111111111111111111111112', // to SOL
+        amount,
+        this.settings.Settings.Slippage,
+        priorityFee
+      );
+      this.emit('trade', { type: 'sell', position: { ...position, txSig: sig } });
+    } catch (e) {
+      // Fallback logic stub: try another DEX or route here in the future
+      this.emit('trade', { type: 'sell-failed', reason: (e as Error).message, position });
+    }
   }
 } 
