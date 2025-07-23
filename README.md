@@ -390,10 +390,3 @@ All settings are in `settings.json` (see `settings.example.json`):
 
 ## Support
 For questions or help, open an issue or contact the project maintainer.
-# MoneyPrinterSolSnipingBot
-MoneyPrinterSolSnipingBot
-
-## Support
-For questions or help, open an issue or contact the project maintainer.
-# MoneyPrinterSolSnipingBot
-MoneyPrinterSolSnipingBot
