@@ -13,6 +13,7 @@
     "AmountTokensToTrade": 3,
     "TakeProfitPercentage": 25.0,
     "StopLossPercentage": 15.0,
+    "TrailingStopPercentage": 0,
     "EntryLiquidity": 10000.0,
     "ExitLiquidity": 6000.0,
     "TokenAgeMaxHr": 0.33,
