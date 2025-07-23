@@ -16,6 +16,7 @@ export const SettingsSchema = z.object({
     AmountTokensToTrade: z.number().int(),
     TakeProfitPercentage: z.number(),
     StopLossPercentage: z.number(),
+    TrailingStopPercentage: z.number().optional(),
     EntryLiquidity: z.number(),
     ExitLiquidity: z.number(),
     TokenAgeMaxHr: z.number(),
