@@ -215,7 +215,7 @@ The current mode and parameters are always available via `/printing/status`.
 ## Features
 - **Ultra-fast pool sniping** via Helius LaserStream (with Geyser fallback)
 - **Token safety and liquidity checks** (RugCheck, DexScreener, Birdeye, Pump.fun, SolScan)
-- **Automated trading** using Jupiter, Raydium, Orca, and Jito Block-Engine
+- **Automated trading** using Phantom
 - **Take-profit, stop-loss, and trailing SL**
 - **Bankroll and risk controls**
 - **Telegram notifications** (optional)
