@@ -5,6 +5,8 @@ import { Settings } from './Settings';
 export class Watcher extends EventEmitter {
   private ws: WebSocket | null = null;
   private settings: Settings;
+  private reconnectAttempts = 0;
+  private maxReconnects = 5;
 
   constructor(settings: Settings) {
     super();
@@ -12,6 +14,11 @@ export class Watcher extends EventEmitter {
   }
 
   start() {
+    this.reconnectAttempts = 0;
+    this.connect();
+  }
+
+  private connect() {
     const heliusKey = this.settings.Settings.APIKey;
     const useDevnet = this.settings.Settings.TestNet;
     const url = useDevnet
@@ -21,7 +28,7 @@ export class Watcher extends EventEmitter {
     this.ws = new WebSocket(url);
 
     this.ws.on('open', () => {
-      // Subscribe to pool creation events
+      this.reconnectAttempts = 0;
       this.ws!.send(
         JSON.stringify({
           type: 'subscribe',
@@ -36,18 +43,18 @@ export class Watcher extends EventEmitter {
         if (msg.type === 'pool' && msg.event === 'create') {
           this.emit('newPool', msg.data);
         }
-      } catch (e) {
-        // Ignore parse errors
+      } catch {
+        // ignore parse errors
       }
     });
 
     this.ws.on('error', (err) => {
-      // TODO: Fallback to Geyser if LaserStream fails
       this.emit('error', err);
+      this.handleReconnect();
     });
 
     this.ws.on('close', () => {
-      // TODO: Optionally reconnect or fallback
+      this.handleReconnect();
     });
   }
 
@@ -57,4 +64,13 @@ export class Watcher extends EventEmitter {
       this.ws = null;
     }
   }
-} 
+
+  private handleReconnect() {
+    if (this.reconnectAttempts >= this.maxReconnects) {
+      this.emit('error', new Error('Watcher failed to reconnect'));
+      return;
+    }
+    this.reconnectAttempts++;
+    setTimeout(() => this.connect(), Math.min(1000 * this.reconnectAttempts, 10000));
+  }
+}

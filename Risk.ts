@@ -24,9 +24,24 @@ export class RiskManager {
       const val = await this.redis.get('sniper-kill-switch');
       if (val === 'true') return true;
     }
-    // Check Supabase (stub)
+    // Check Supabase table `bot_control` for a kill action
     if (this.settings.Settings.SupabaseUrl && this.settings.Settings.SupabaseKey) {
-      // TODO: Query Supabase for kill-switch
+      try {
+        const url = `${this.settings.Settings.SupabaseUrl}/rest/v1/bot_control?select=action&order=id.desc&limit=1`;
+        const res = await fetch(url, {
+          headers: {
+            apikey: this.settings.Settings.SupabaseKey,
+            Authorization: `Bearer ${this.settings.Settings.SupabaseKey}`,
+          },
+        });
+        const data: any = await res.json();
+        if (Array.isArray(data) && data[0]?.action) {
+          const action = data[0].action.toString().toLowerCase();
+          if (action === 'kill' || action === 'stop' || action === 'off') return true;
+        }
+      } catch {
+        // ignore Supabase errors
+      }
     }
     // Check env
     if (process.env.KILL_SWITCH === 'true') return true;
@@ -58,7 +73,24 @@ export class RiskManager {
 
   // Trailing stop-loss logic (stub)
   checkTrailingStop(position: any, currentPrice: number): boolean {
-    // TODO: Implement trailing SL logic
+    const pct = (this.settings.Settings as any).TrailingStopPercentage;
+    if (!pct) return false;
+
+    if (!position.highestPrice) {
+      position.highestPrice = position.entryPrice || currentPrice;
+      position.trailingStop = position.highestPrice * (1 - pct / 100);
+      return false;
+    }
+
+    if (currentPrice > position.highestPrice) {
+      position.highestPrice = currentPrice;
+      position.trailingStop = currentPrice * (1 - pct / 100);
+    }
+
+    if (position.trailingStop && currentPrice <= position.trailingStop) {
+      return true;
+    }
+
     return false;
   }
-} 
+}

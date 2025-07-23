@@ -34,24 +34,31 @@ export class Trader extends EventEmitter {
   }
 
   async signAndSendJitoBundle(tx: Transaction, connection: Connection, priorityFee: number): Promise<string> {
-    // TODO: Replace with real Jito bundle submission
-    // For now, just send the transaction normally
     const secretKey = bs58.decode(this.settings.Settings.PrivateKey);
     const keypair = Keypair.fromSecretKey(secretKey);
     tx.feePayer = keypair.publicKey;
     tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
     await tx.sign(keypair);
-    // Simulate Jito bundle submission with retries
-    for (let i = 0; i < 3; i++) {
-      try {
-        const sig = await sendAndConfirmTransaction(connection, tx, [keypair], { commitment: 'confirmed' });
-        return sig;
-      } catch (e) {
-        // Increase priority fee and retry
-        // (In real Jito, set priority fee in bundle)
-      }
+
+    const serialized = tx.serialize();
+    const body = {
+      transactions: [serialized.toString('base64')],
+      priority_fee: priorityFee,
+      broadcast: true,
+    };
+
+    const res = await fetch('https://block-engine.jito.wtf/api/v1/bundles', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+
+    const json = await res.json();
+    if (!res.ok) {
+      throw new Error('Jito bundle error: ' + (json.error || res.statusText));
     }
-    throw new Error('Jito bundle submission failed');
+
+    return json.signature || json.bundleId;
   }
 
   async performPhantomSwap(fromMint: string, toMint: string, amount: number, slippage: number, priorityFee: number) {
